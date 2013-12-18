@@ -1,4 +1,4 @@
-package mogilefs-go
+package gomog
 
 import( 
   "strconv"
