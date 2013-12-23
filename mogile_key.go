@@ -122,7 +122,6 @@ func ( k *MogileKey ) StoreReader( r io.Reader, contentType string ) error {
     return err
   }
   request.Header.Add( "Content-Type", contentType )
-  fmt.Println( request.Header.Get( "Content-Length" ) )
   response, err = http.DefaultClient.Do( request ) 
   if( err != nil ) {
     return err
