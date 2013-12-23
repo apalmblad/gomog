@@ -7,7 +7,7 @@ import(
   )
 
 type MogileDomain struct {
-  client *MogileClient
+  Client *MogileClient
   Domain string
 }
 
