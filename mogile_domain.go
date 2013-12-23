@@ -21,7 +21,7 @@ func ( c *MogileClient ) GetDomains() ( [](*MogileDomain), error ){
     var s string
     s = data.Get( "domain" + strconv.Itoa(i + 1) )
     d.Domain = s
-    d.client = c
+    d.Client = c
     domains[i] = &d
   }
   return domains, err
@@ -30,15 +30,15 @@ func ( c *MogileClient ) GetDomains() ( [](*MogileDomain), error ){
 func ( c *MogileClient ) Domain( d string ) *MogileDomain {
   var domain MogileDomain
   domain.Domain = d
-  domain.client = c
+  domain.Client = c
   return &domain
 }
 func ( d *MogileDomain ) Create() ( error ) {
-  _, err := d.client.doRequest( "create_domain", d.values(), false )
+  _, err := d.doRequest( "create_domain", d.values(), false )
   return err
 }
 func ( d *MogileDomain ) Delete() ( error ) {
-  _, err := d.client.doRequest( "delete_domain", d.values(), false )
+  _, err := d.doRequest( "delete_domain", d.values(), false )
   return err
 }
 func ( d *MogileDomain ) values() url.Values {
@@ -47,7 +47,7 @@ func ( d *MogileDomain ) values() url.Values {
   return v
 }
 func ( d *MogileDomain ) CreateOpen() (*MogileFid, error ) {
-  data, err := d.client.doRequest( "create_open", d.values(), false )
+  data, err := d.doRequest( "create_open", d.values(), false )
   if( err != nil ) {
     return nil, err
   }
@@ -65,7 +65,7 @@ func ( d *MogileDomain ) CreateOpen() (*MogileFid, error ) {
 
 }
 func ( d *MogileDomain ) Exists() (bool, error ) {
-  domains, err := d.client.GetDomains()
+  domains, err := d.Client.GetDomains()
   if( err != nil ) {
     return false, err
   }
@@ -76,6 +76,9 @@ func ( d *MogileDomain ) Exists() (bool, error ) {
   }
   return false, nil
 }
+func (d *MogileDomain ) doRequest( cmd string, args url.Values, isIdempotent bool ) ( url.Values, error ) {
+  return d.Client.doRequest( cmd, args, isIdempotent )
+}
 func ( d *MogileDomain ) CreateClose( fid *MogileFid, path string, size int64, key string ) error {
   v := d.values()
   v.Add( "fid", strconv.Itoa( fid.FileId ) )
@@ -83,6 +86,6 @@ func ( d *MogileDomain ) CreateClose( fid *MogileFid, path string, size int64, k
   v.Add( "path", path )
   v.Add( "size", strconv.FormatInt( size, 10 ) )
   v.Add( "key", key )
-  _, err := d.client.doRequest( "create_close", v, false )
+  _, err := d.doRequest( "create_close", v, false )
   return err
 }

@@ -4,7 +4,6 @@ import(
   "strconv"
   "net/url"
   "net/http"
-  "fmt"
   "io"
   "math/rand"
   )
@@ -26,11 +25,11 @@ func ( k *MogileKey ) values() url.Values {
   return v
 }
 func ( k *MogileKey ) FileInfo() ( url.Values, error ) {
-  return k.Domain.client.doRequest( "file_info", k.values(), true )
+  return k.Domain.doRequest( "file_info", k.values(), true )
 }
 
 func ( k *MogileKey ) Paths() ( []string, error ) {
-  data, err := k.Domain.client.doRequest( "get_paths", k.values(), true )
+  data, err := k.Domain.doRequest( "get_paths", k.values(), true )
   numPaths, _ := strconv.Atoi( data.Get( "paths" ) )
   rVal := make( []string, numPaths )
   for i := 0; i < numPaths; i++ {
@@ -56,7 +55,7 @@ func ( d *MogileDomain ) Key( key string ) *MogileKey {
 
 func ( k *MogileKey ) ListFids( ) ( []*MogileFid, error ) {
   v := k.values()
-  data, err := k.Domain.client.doRequest( "list_fids", v, true )
+  data, err := k.Domain.doRequest( "list_fids", v, true )
   numFids, _ := strconv.Atoi( data.Get( "fid_count" ) )
   rVal := make( [](*MogileFid), numFids );
   for i := 0; i < numFids; i++ {
@@ -73,7 +72,7 @@ func ( k *MogileKey ) ListFids( ) ( []*MogileFid, error ) {
   return rVal, err
 }
 func ( k *MogileKey ) Delete() ( error ) {
-  _, err := k.Domain.client.doRequest( "delete", k.values(), false )
+  _, err := k.Domain.doRequest( "delete", k.values(), false )
   return err
 }
 
@@ -81,7 +80,7 @@ func ( k *MogileKey ) Rename( newName string ) ( error ) {
   v := k.Domain.values()
   v.Add( "from_key", k.Key )
   v.Add( "to_key", newName )
-  _, err := k.Domain.client.doRequest( "rename", v, false )
+  _, err := k.Domain.doRequest( "rename", v, false )
   if( err != nil ) {
     k.Key = newName
   }
@@ -95,7 +94,7 @@ func ( k *MogileKey ) CreateClose( fid *MogileFid, path string, size int64 ) err
   if( size > 0  ) {
     v.Add( "size", strconv.FormatInt( size, 10 ) )
   }
-  _, err := k.Domain.client.doRequest( "create_close", v, false )
+  _, err := k.Domain.doRequest( "create_close", v, false )
   return err
 }
 
@@ -139,7 +138,7 @@ func ( d *MogileDomain ) ListKeys( prefix string, after string , limit int ) ( *
     v.Add( "after", after )
   }
   v.Add( "limit", strconv.Itoa( limit ) )
-  data, err := d.client.doRequest( "list_keys", v, true )
+  data, err := d.doRequest( "list_keys", v, true )
   if( err != nil ) {
     return nil, err
   }
