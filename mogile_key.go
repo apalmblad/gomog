@@ -123,10 +123,11 @@ func ( k *MogileKey ) StoreReader( r io.Reader, contentType string ) error {
   }
   request.Header.Add( "Content-Type", contentType )
   fmt.Println( request.Header.Get( "Content-Length" ) )
-  _, err = http.DefaultClient.Do( request ) 
+  response, err = http.DefaultClient.Do( request ) 
   if( err != nil ) {
     return err
   }
+  response.Body.Close()
   return k.CreateClose( fid, path, 0 );
 
 }
