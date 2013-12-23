@@ -121,9 +121,9 @@ func ( k *MogileKey ) StoreReader( r io.Reader, contentType string ) error {
     return err
   }
   request.Header.Add( "Content-Type", contentType )
-  response, err = http.DefaultClient.Do( request ) 
-  if( err != nil ) {
-    return err
+  response, httpErr := http.DefaultClient.Do( request ) 
+  if( httpErr != nil ) {
+    return httpErr
   }
   response.Body.Close()
   return k.CreateClose( fid, path, 0 );
