@@ -93,6 +93,10 @@ func ( c *MogileClient ) doRequest( cmd string, args url.Values, isIdempotent bo
   var data []byte = make( []byte, 512 )
   for {
     bytesSent, err := c.Socket.Write( []byte(request) )
+    if( err == syscall.EPIPE ) {
+      c.setupConnection();
+      bytesSent, err = c.Socket.Write( []byte(request) )
+    }
     if( err != nil || bytesSent != len( request )) {
       c.Shutdown()
       if( err == nil ) {
