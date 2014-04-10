@@ -94,7 +94,10 @@ func ( c *MogileClient ) doRequest( cmd string, args url.Values, isIdempotent bo
   for {
     bytesSent, err := c.Socket.Write( []byte(request) )
     if( err == syscall.EPIPE ) {
-      c.setupConnection();
+      err = c.setupConnection();
+      if( err != nil ) {
+        return nil, err
+      }
       bytesSent, err = c.Socket.Write( []byte(request) )
     }
     if( err != nil || bytesSent != len( request )) {
@@ -170,6 +173,9 @@ func (s Socket ) isReadable( timeout int ) bool {
 
 func (c *MogileClient ) setupConnection() error {
   order := rand.Perm( len( c.Hosts ) )
+  if( c.Socket != nil ) {
+    c.Socket.Close() 
+  }
   for i, _ := range( order ) {
     conn, err := net.DialTCP( "tcp4", nil, c.Hosts[i] )
     if( err != nil ) {
@@ -177,6 +183,7 @@ func (c *MogileClient ) setupConnection() error {
     }
 
     c.Socket = conn
+    conn.SetKeepAlive( true )
     return nil
   }
   return errors.New( "Connection was not setup" )
