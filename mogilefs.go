@@ -91,6 +91,17 @@ func ( c *MogileClient ) doRequest( cmd string, args url.Values, isIdempotent bo
   c.Lock()
   defer c.Unlock()
   var data []byte = make( []byte, 512 )
+  deadlineError := c.Socket.SetDeadline( time.Now().Add( time.Second * 30 ) );
+  if( deadlineError != nil ) {
+    err = c.setupConnection();
+    if( err != nil ) {
+      return nil, err
+    }
+    deadlineError = c.Socket.SetDeadline( time.Now().Add( time.Second * 30 ) );
+    if( deadlineError != nil ) {
+      return nil, deadlineError
+    }
+  }
   for {
     bytesSent, err := c.Socket.Write( []byte(request) )
     if( err != nil ) {
@@ -99,6 +110,9 @@ func ( c *MogileClient ) doRequest( cmd string, args url.Values, isIdempotent bo
         return nil, err
       }
       bytesSent, err = c.Socket.Write( []byte(request) )
+      if( err != nil ) {
+        return nil, errors.New( "Socket error on write after retry!" )
+      }
     }
     if( err != nil || bytesSent != len( request )) {
       c.Shutdown()
@@ -108,7 +122,7 @@ func ( c *MogileClient ) doRequest( cmd string, args url.Values, isIdempotent bo
         return nil, err
       }
     }
-    c.Socket.SetReadDeadline( time.Now().Add( time.Second * c.Timeout ) );
+    c.Socket.SetReadDeadline( time.Now().Add( time.Second * 5 ) );
     bytes, readError := c.Socket.Read( data )
     data = data[0:bytes]
     if( readError != nil ) {
