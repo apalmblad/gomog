@@ -93,9 +93,9 @@ func ( c *MogileClient ) doRequest( cmd string, args url.Values, isIdempotent bo
   var data []byte = make( []byte, 512 )
   deadlineError := c.Socket.SetDeadline( time.Now().Add( time.Second * 30 ) );
   if( deadlineError != nil ) {
-    err = c.setupConnection();
-    if( err != nil ) {
-      return nil, err
+    deadlineError = c.setupConnection();
+    if( deadlineError != nil ) {
+      return nil, deadlineError
     }
     deadlineError = c.Socket.SetDeadline( time.Now().Add( time.Second * 30 ) );
     if( deadlineError != nil ) {
