@@ -4,7 +4,6 @@ import( "net"
   "errors"
   "sync"
   "strconv"
-  "syscall"
   "strings"
   "time"
   "net/url"
@@ -94,7 +93,7 @@ func ( c *MogileClient ) doRequest( cmd string, args url.Values, isIdempotent bo
   var data []byte = make( []byte, 512 )
   for {
     bytesSent, err := c.Socket.Write( []byte(request) )
-    if( err == syscall.EPIPE ) {
+    if( err != nil ) {
       err = c.setupConnection();
       if( err != nil ) {
         return nil, err
