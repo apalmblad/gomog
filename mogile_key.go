@@ -43,6 +43,9 @@ func ( k *MogileKey ) Path() ( string, error ) {
   if( err != nil ) {
     return "", err
   }
+  if( len( paths ) == 0 ) {
+    return "", fmt.Errorf( "No paths found for %s in domain %s", k.Key, k.Domain.Domain )
+  }
   return paths[ rand.Int31n( int32( len( paths ) )  ) ], nil
 }
 
