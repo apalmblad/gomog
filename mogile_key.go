@@ -8,10 +8,19 @@ import(
   "fmt"
   "math/rand"
   )
-
+type countingReader struct {
+  r      io.Reader
+  bytes int
+}
+func (cr *countingReader) Read( buffer []byte ) (nr int, err error) {
+  nr, err = cr.r.Read( buffer )
+  cr.bytes += nr
+  return
+}
 type MogileKey struct {
   Key string
   Domain *MogileDomain
+  Class string
 }
 
 type MogileKeyList struct {
@@ -115,12 +124,21 @@ func ( k *MogileKey ) Stream() (*http.Response, error) {
 }
 
 func ( k *MogileKey ) StoreReader( r io.Reader, contentType string ) error {
-  fid, err := k.Domain.CreateOpen()
+  v :=  url.Values{}
+  v.Add( "domain", k.Domain.Domain )
+  v.Add( "class", k.Class )
+  v.Add( "key", k.Key )
+  v.Add( "fid", "0" )
+  v.Add( "multi_dest", "0" )
+
+  data, err := k.Domain.doRequest( "create_open", v, false )
+  path := data.Get( "path" )
+  fid := data.Get( "fid" )
   if( err != nil ) {
     return err
   }
-  path := fid.RandomPath()
-  request, err := http.NewRequest( "PUT", path, r ) 
+  cr := countingReader{ r: r }
+  request, err := http.NewRequest( "PUT", path, &cr ) 
   if( err != nil ) {
     return err
   }
@@ -130,8 +148,16 @@ func ( k *MogileKey ) StoreReader( r io.Reader, contentType string ) error {
     return httpErr
   }
   response.Body.Close()
-  return k.CreateClose( fid, path, 0 );
 
+  close_args :=  url.Values{}
+  close_args.Add( "domain", k.Domain.Domain )
+  close_args.Add( "key", data.Get( "key" ) )
+  close_args.Add( "fid", fid )
+  close_args.Add( "devid", data.Get( "devid" ) )
+  close_args.Add( "path", path )
+  close_args.Add( "size", strconv.Itoa( cr.bytes ) )
+  _, close_err := k.Domain.doRequest( "create_close", close_args, false )
+  return close_err
 }
 func ( d *MogileDomain ) ListKeys( prefix string, after string , limit int ) ( *MogileKeyList, error ) {
   v := d.values()
