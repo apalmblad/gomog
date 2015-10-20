@@ -151,6 +151,7 @@ func ( k *MogileKey ) StoreReader( r io.Reader, contentType string ) error {
 
   close_args :=  url.Values{}
   close_args.Add( "domain", k.Domain.Domain )
+  close_args.Add( "class", k.Class )
   close_args.Add( "key", data.Get( "key" ) )
   close_args.Add( "fid", fid )
   close_args.Add( "devid", data.Get( "devid" ) )
