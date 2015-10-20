@@ -4,6 +4,7 @@ import(
   "strconv"
   "net/url"
   "net/http"
+  "sync"
   "io"
   "fmt"
   "math/rand"
@@ -20,7 +21,7 @@ func (cr *countingReader) Read( buffer []byte ) (nr int, err error) {
 type MogileKey struct {
   Key string
   Domain *MogileDomain
-  Class string
+  Class *string
 }
 
 type MogileKeyList struct {
@@ -126,7 +127,9 @@ func ( k *MogileKey ) Stream() (*http.Response, error) {
 func ( k *MogileKey ) StoreReader( r io.Reader, contentType string ) error {
   v :=  url.Values{}
   v.Add( "domain", k.Domain.Domain )
-  v.Add( "class", k.Class )
+  if( k.Class != nil ) {
+    v.Add( "class", *k.Class )
+  }
   v.Add( "key", k.Key )
   v.Add( "fid", "0" )
   v.Add( "multi_dest", "0" )
@@ -137,28 +140,40 @@ func ( k *MogileKey ) StoreReader( r io.Reader, contentType string ) error {
   if( err != nil ) {
     return err
   }
+  var httpError error
   cr := countingReader{ r: r }
-  request, err := http.NewRequest( "PUT", path, &cr ) 
-  if( err != nil ) {
-    return err
+  var wg sync.WaitGroup
+  wg.Add( 1 )
+
+  go func() {
+    defer wg.Done()
+    var request *http.Request
+    request, httpError = http.NewRequest( "PUT", path, &cr ) 
+    if( httpError != nil ) {
+      return
+    }
+    request.Header.Add( "Content-Type", contentType )
+    var response *http.Response ;
+    response, httpError = http.DefaultClient.Do( request ) 
+    response.Body.Close()
+  }()
+  wg.Wait()
+  if( httpError != nil ) {
+    return httpError
   }
-  request.Header.Add( "Content-Type", contentType )
-  response, httpErr := http.DefaultClient.Do( request ) 
-  if( httpErr != nil ) {
-    return httpErr
-  }
-  response.Body.Close()
 
   close_args :=  url.Values{}
   close_args.Add( "domain", k.Domain.Domain )
-  close_args.Add( "class", k.Class )
-  close_args.Add( "key", data.Get( "key" ) )
+  if( k.Class != nil ) {
+    close_args.Add( "class", *k.Class )
+  }
+  close_args.Add( "key", k.Key )
   close_args.Add( "fid", fid )
   close_args.Add( "devid", data.Get( "devid" ) )
   close_args.Add( "path", path )
   close_args.Add( "size", strconv.Itoa( cr.bytes ) )
-  _, close_err := k.Domain.doRequest( "create_close", close_args, false )
-  return close_err
+  _, closeErr := k.Domain.Client.doRequest( "create_close", close_args, false )
+  return closeErr
 }
 func ( d *MogileDomain ) ListKeys( prefix string, after string , limit int ) ( *MogileKeyList, error ) {
   v := d.values()
