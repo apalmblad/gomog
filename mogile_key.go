@@ -3,6 +3,7 @@ package gomog
 import( 
   "strconv"
   "net/url"
+  "errors"
   "net/http"
   "sync"
   "io"
@@ -144,7 +145,7 @@ func ( k *MogileKey ) StoreReader( r io.Reader, contentType string ) error {
   cr := countingReader{ r: r }
   var wg sync.WaitGroup
   wg.Add( 1 )
-
+  write_finished := false
   go func() {
     defer wg.Done()
     var request *http.Request
@@ -156,24 +157,28 @@ func ( k *MogileKey ) StoreReader( r io.Reader, contentType string ) error {
     var response *http.Response ;
     response, httpError = http.DefaultClient.Do( request ) 
     response.Body.Close()
+    write_finished = true
   }()
   wg.Wait()
   if( httpError != nil ) {
     return httpError
   }
-
-  close_args :=  url.Values{}
-  close_args.Add( "domain", k.Domain.Domain )
-  if( k.Class != nil ) {
-    close_args.Add( "class", *k.Class )
+  if( write_finished ) {
+    close_args :=  url.Values{}
+    close_args.Add( "domain", k.Domain.Domain )
+    if( k.Class != nil ) {
+      close_args.Add( "class", *k.Class )
+    }
+    close_args.Add( "key", k.Key )
+    close_args.Add( "fid", fid )
+    close_args.Add( "devid", data.Get( "devid" ) )
+    close_args.Add( "path", path )
+    close_args.Add( "size", strconv.Itoa( cr.bytes ) )
+    _, closeErr := k.Domain.Client.doRequest( "create_close", close_args, false )
+    return closeErr
+  } else {
+    return errors.New( "MOgilefs write did not finish!" ) 
   }
-  close_args.Add( "key", k.Key )
-  close_args.Add( "fid", fid )
-  close_args.Add( "devid", data.Get( "devid" ) )
-  close_args.Add( "path", path )
-  close_args.Add( "size", strconv.Itoa( cr.bytes ) )
-  _, closeErr := k.Domain.Client.doRequest( "create_close", close_args, false )
-  return closeErr
 }
 func ( d *MogileDomain ) ListKeys( prefix string, after string , limit int ) ( *MogileKeyList, error ) {
   v := d.values()
